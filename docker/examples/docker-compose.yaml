@@ -1,0 +1,42 @@
+version: '3'
+
+services:
+
+  app:
+    build:
+      context: node
+    container_name: app
+    # The docker-entrypoint.sh script is default from the node image
+    entrypoint: dockerize -wait tcp://db:3306 -timeout 20s docker-entrypoint.sh
+    networks:
+      - node-network
+    volumes:
+      - ./node:/usr/src/app
+    tty: true
+    ports:
+      - "3000:3000"
+    # The depends_on command will just start the dependency before
+    # However, it doesn't wait for the dependency to start!
+    # So, we can't rely just on the depends_on to make the dependency up and running when starting the app
+    # We can use the Dockerize utility (installing it in the node image - Dockerfile) to make sure the dependency is up and running before starting the app
+    # And we need use the dockerize command as the entrypoint to the app container
+    depends_on:
+      - db
+
+  db:
+    image: mysql:5.7
+    command: --innodb-use-native-aio=0
+    container_name: db
+    restart: always
+    tty: true
+    volumes:
+      - ./mysql:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: nodedb
+    networks:
+      - node-network
+
+networks:
+  node-network:
+    driver: bridge
