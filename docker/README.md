@@ -173,6 +173,11 @@ docker rm $(docker ps -a -q) -f
 # command to remove ALL containers
 ```
 
+```shell
+docker logs <container_id> or <container_name>
+# show the logs of a container
+```
+
 ### Bind Mounts and Volumes
 
 ```shell
