@@ -262,6 +262,15 @@ docker build -t dyarleniber/nginx-with-vim:latest .
 # . = path to the dockerfile, in this case, the current directory
 ```
 
+> If we change the Dockerfile name, we need to specify the name of the Dockerfile when building it, using the -f option:
+
+```shell
+docker build -t dyarleniber/laravel:prod laravel -f laravel/Dockerfile.prod
+# dyarleniber/laravel:prod = image name
+# laravel = path to the dockerfile
+# laravel/Dockerfile.prod = name of the dockerfile
+```
+
 More commands of Dockerfile:
 
 ```Dockerfile
