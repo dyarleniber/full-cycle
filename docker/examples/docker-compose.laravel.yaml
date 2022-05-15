@@ -1,0 +1,30 @@
+version: '3'
+
+services:
+
+  laravel:
+    build:
+      context: ./laravel
+      dockerfile: Dockerfile.prod
+    # image in this case is optional, since we are using a Dockerfile
+    # this image name will be used when building the image via docker-compose
+    # if we don't specify an image name, an image name will be generated automatically by docker-compose
+    image: dyarleniber/laravel:prod
+    container_name: laravel
+    networks:
+      - laranet
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile.prod
+    image: dyarleniber/nginx:prod
+    container_name: nginx
+    networks:
+      - laranet
+    ports:
+      - "8080:80"
+
+networks:
+  laranet:
+    driver: bridge

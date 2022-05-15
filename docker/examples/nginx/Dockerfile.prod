@@ -11,3 +11,4 @@ RUN mkdir /var/www/html -p && \
 # docker network create laranet
 # docker run -d --network laranet --name laravel dyarleniber/laravel:prod
 # docker run -d --network laranet --name nginx -p 8080:80 dyarleniber/nginx:prod
+# Or using docker-compose

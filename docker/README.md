@@ -404,3 +404,35 @@ docker network connect mynetwork ubuntu3
 
 > To access the host computer from a container (without using a network), we can access host.docker.internal instead of the host IP address.
 > For example: "curl http://host.docker.internal:8080"
+
+### docker-compose
+
+```shell
+docker-compose up
+# start all containers
+```
+
+```shell
+docker-compose down
+# stop all containers
+```
+
+```shell
+docker-compose build
+# build all containers
+```
+
+```shell
+docker-compose up -d
+# start all containers in background
+```
+
+```shell
+docker-compose ps
+# list all containers of the docker-compose file
+```
+
+```shell
+docker-compose up -d --build
+# start all containers in background and build or re-build them
+```
