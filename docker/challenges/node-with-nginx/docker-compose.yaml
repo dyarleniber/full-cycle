@@ -1,0 +1,50 @@
+version: "3"
+
+services:
+
+  dyarleniber_node_app:
+    build:
+      context: node
+    container_name: dyarleniber_node_app
+    entrypoint: dockerize -wait tcp://dyarleniber_node_db:3306 -timeout 20s docker-entrypoint.sh
+    command: node index.js
+    networks:
+      - dyarleniber-node-network
+    tty: true
+    ports:
+      - "3000:3000"
+    depends_on:
+      - dyarleniber_node_db
+
+  dyarleniber_node_nginx:
+    image: nginx
+    container_name: dyarleniber_node_nginx
+    networks:
+      - dyarleniber-node-network
+    volumes:
+      - ./nginx/nginx-conf:/etc/nginx/conf.d
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - dyarleniber_node_app
+
+  dyarleniber_node_db:
+    image: mysql:5.7
+    container_name: dyarleniber_node_db
+    command: --innodb-use-native-aio=0
+    restart: always
+    tty: true
+    volumes:
+      - ./mysql:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: node_db
+    networks:
+      - dyarleniber-node-network
+
+networks:
+  dyarleniber-node-network:
+    driver: bridge
