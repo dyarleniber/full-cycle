@@ -10,3 +10,5 @@ cd full-cycle/docker/challenges/node-with-nginx
 ```shell
 docker-compose up
 ```
+
+Then, you can access the challenge at `http://localhost:8080`.
