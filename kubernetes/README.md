@@ -73,6 +73,70 @@ By defining the `targetPort`, the service will redirect the requests to the cont
 
 It is also possible to create a proxy to the service, using the `kubectl proxy` command. This will create a proxy to the API server, and the services will be accessible for example in the `localhost:8080`, like `kubectl proxy --port=8080`.
 
+
+## Config Map and Secrets
+
+We can set environment variables inside the YAML deployment manifest file. But, we can avoid this by using ConfigMap or Secrets.
+
+> Besides, we can also use ConfigMap and Secrets to store the configuration files, by mounting them as volumes.
+
+Secrets are used to store sensitive information like passwords, tokens, etc. ConfigMap is used to store non-sensitive information like configuration files, etc.
+By using Secrets, the data is stored in base64 format by default. So, we can use the following command to decode the data: `echo <base64_encoded_data> | base64 --decode`.
+
+Even thought Secrets use base64 encoding, it is not totally secure. Since, we can decode the data. The ideal way to use Secrets is to integrate with a secret management tool like Vault. So, no one can access the secrets directly.
+
+As an example, in order to define environment variables using Secrets in a YAML configuration file, instead of defining them as follows:
+```yaml
+data:
+  USER: "userx"
+  PASSWORD: "passwordy"
+```
+We must define them with all the values in base64 format:
+```yaml
+data:
+  USER: "dXNlcngK"
+  PASSWORD: "cGFzc3dvcmR5Cg=="
+```
+
+The following command can be used to encode the data in base64 format: `echo <data> | base64`.
+
+Remember that the values defined using Secrets are environment variables. So, we can see them by accessing the pod directly:
+```bash
+kubectl get po
+kubectl exec -it <pod_name> -- bash
+echo $USER
+```
+
+## Probes
+
+## Resources and HPA
+
+## Statefulsets and persistent volumes
+
+## Ingress
+
+The LoadBalancer service type generates an external IP address that is accessible from outside the cluster.
+However, in a microservices architecture, we can have multiple services. So, we can have multiple external IP addresses, and this is not ideal. The cost of having multiple load balancers is also high.
+
+In order to solve this problem, we can use an Ingress. It is a component that runs in the cluster and it is responsible for routing the traffic to the correct service, acting as an entry point for the application.
+Using Ingress, we can have a single external IP address, and a single load balancer.
+
+When using Ingress, all the services must be exposed using a `ClusterIP` service type. Therefore, the cost for maintaining the services is lower.
+> Regarding the service type, once created, it is not possible to change the service type. So, if we want to change the service type, we must delete the service and create a new one.
+
+### Ingress Controller
+
+In order for the Ingress resource to work, the cluster must have an ingress controller running.
+Ingress controllers are not started automatically with a cluster (unlike other types of controllers). So, we must install an ingress controller implementation manually.
+
+One of the most popular ingress controllers is the Nginx ingress controller. And the easiest way to install it is by using the Helm package manager.
+
+> The default installation using Helm will install the ingress controller in the default namespace. Which is not recommended. The ideal way is to install it in a dedicated namespace.
+
+After the Nginx ingress controller installation, we can see that it created a new service of type `LoadBalancer`. And if the k8s cluster is running in a cloud provider, it will also create an external IP address. Besides, it should also create a new pod for the ingress controller.
+
+The Ingress rules are defined using YAML manifests as well. Including the annotations, which are used to define third-party especific configurations (Nginx in this case).
+
 ## kubectl commands
 
 - `kubectl config get-clusters`: List all clusters in the kubeconfig file.
