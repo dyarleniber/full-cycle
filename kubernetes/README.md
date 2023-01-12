@@ -56,7 +56,7 @@ The 3 main types of services are:
 
 - **ClusterIP**: Exposes the service on a cluster-internal IP. This means that the service is only accessible from within the cluster. This is the default type of service.
 - **NodePort**: Exposes the service on each Node's IP at a static port (the `NodePort`). The service is accessible from outside the cluster using `<NodeIP>:<NodePort>` (The range of the `NodePort` must be from 30000 to 32767).
-- **LoadBalancer**: Exposes the service externally using a cloud provider's load balancer. In order to achieve this, it also creates a `ClusterIP` service, and a `NodePort` service.
+- **LoadBalancer**: Exposes the service externally using a cloud provider's load balancer (it also creates a internal IP, such as the `ClusterIP` service type, and a node port, such as the `NodePort`).
 
 ![k8s-svc](https://user-images.githubusercontent.com/40317398/205502618-eeccd3dd-6001-4a17-b3df-862984895f69.png)
 
@@ -71,8 +71,9 @@ In order to test the services, we can use the `port-forward` command, but as alr
 Inside the service definition, we can also define the `port` and the `targetPort`. The `port` is the port that the service will be exposed, and the `targetPort` is the port that the container will be accessible.
 By defining the `targetPort`, the service will redirect the requests to the container port, when the `targetPort` is not defined, the service will redirect the requests to the same port that the service is exposed (`port`).
 
-It is also possible to create a proxy to the service, using the `kubectl proxy` command. This will create a proxy to the API server, and the services will be accessible for example in the `localhost:8080`, like `kubectl proxy --port=8080`.
+## Proxy
 
+It is also possible to start a proxy to the k8s API server using the command `kubectl proxy --port=8080`. When the proxy server is running, we can explore the API using curl, wget, or a browser: `http://localhost:8080`.
 
 ## Config Map and Secrets
 
@@ -109,7 +110,43 @@ echo $USER
 
 ## Probes
 
+Liveness, readiness, and startup probes are all features of Kubernetes that help ensure that applications running in containers are healthy and running smoothly. They should be defined in the pod definition (inside the Deployment manifest file for example).
+
+- **Liveness** probes are used to check if a container is still running, and if it is not, Kubernetes will **restart** it.
+> This is useful for containers that might become stuck or unresponsive, as it ensures that the application continues to run without interruption.
+
+There are basically 3 main ways to implement liveness probes:
+1. HTTP GET probes, which perform a GET request to a specified URL and check the response code to determine the container's liveness.
+2. TCP socket probes, which attempt to open a TCP connection to a specified port on the container and check for a successful connection.
+3. Command execution probes, which run a specified command inside the container and check the exit code to determine the container's liveness.
+
+> Each of these types of probes can be customized to fit the specific needs of the application running in the container.
+
+- **Readiness** probes are similar to liveness probes, but they are used to check if a container is ready to receive traffic. If a container is not ready, Kubernetes will **not send it any traffic**.
+> This can be useful for ensuring that the application has fully started up and is able to handle requests.
+
+The ways to implement readiness probes are the same as the liveness probes.
+
+**IMPORTANT NOTES**:
+- Using Liveness and Readiness at the same time can potentially lead to a `CrashLoopBackOff` error, especially when using the `initialDelaySeconds` option for the Readiness probe. This is because the Liveness probe can fail before the Readiness probe succeeds, which will cause the container to be restarted. So, it will cause a loop of restarts.
+> A possible fix for this is to define the same `initialDelaySeconds` value for both Liveness and Readiness probes. However, if the container fails at some point later, and the Liveness probe runs before the Readiness probe, the container will be restarted again, and the Readiness probe will not be able to succeed, which will cause a loop of restarts again. And a fix for this could be to define a higher value for the `initialDelaySeconds` option for the Liveness probe.
+> All those fixes are not ideal, in fact, they are just workarounds, since in a real-world scenario, we usually don't know how long it will take for the container to start up and be ready to receive traffic, this time can vary a lot depending on the application.
+> To solve those problems, we can use the Startup probe, which was introduced in Kubernetes 1.16 to address those issues and provide a better and definitive solution.
+
+- **Startup** probes are used to check if a container has started up successfully. Basically, it works **like a Readiness probe**, but it is only run **once**, when the container starts up. When a Startup probe is defined, the Liveness and Readiness probes are not run until the Startup probe succeeds.
+> This is useful for applications that take a long time to start up, and don't have a fixed start-up time.
+
+The ways to implement startup probes are the same as the liveness and readiness probes.
+
 ## Resources and HPA
+
+### metrics-server
+
+In order to use the Horizontal Pod Autoscaler (HPA), we must install the metrics-server. It is a component that collects metrics from the nodes and exposes them to the API server. Usually, it is installed by default in the cluster in the cloud providers. But, in the case of Minikube, or Kind for example, we must install it manually.
+
+The installation guide can be found in [this GitHub repository](https://github.com/kubernetes-sigs/metrics-server).
+
+> 
 
 ## Statefulsets and persistent volumes
 
