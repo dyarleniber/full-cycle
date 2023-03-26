@@ -36,21 +36,22 @@ The Worker nodes are where the application containers (pods) are actually run. T
 
 ![k8s-objs](https://user-images.githubusercontent.com/40317398/205502566-b305e611-71e6-4cbe-a273-a18b83f81712.png)
 
-- **Pods**: They are the smallest deployable units in k8s. It container one or more containers, usually one container per pod.
+- **Pods**: They are the smallest deployable units in k8s. It contains one or more containers, usually one container per pod.
 
 - **Deployment**: It is responsible for managing the pods. Inside a deployment, it is possible to define the number of replicas. The main goal of a deployment is to ensure that the desired number of pods is always running.
-For example, if we have a deployment with replicas set to 3, k8s will make sure that there are 3 pods running at all times, and if one of them is deleted, k8s will create a new one.
-If there are no more resources in the node, k8s will create the pod in another node. And if there are no more nodes available, this new pod will be in a pending state until a new node is available.
-> When a deployment is created, it creates a ReplicaSet, and the Pods, so we don't need to create them manually.
-> The name of the pods created by a deployment will be in the following format: `<deployment>-<replica-set>-<unique-id>`.
+  For example, if we have a deployment with replicas set to 3, k8s will make sure that there are 3 pods running at all times, and if one of them is deleted, k8s will create a new one.
+  If there are no more resources in the node, k8s will create the pod in another node. And if there are no more nodes available, this new pod will be in a pending state until a new node is available.
+
+  > When a deployment is created, it creates a ReplicaSet, and the Pods, so we don't need to create them manually.
+  > The name of the pods created by a deployment will be in the following format: `<deployment>-<replica-set>-<unique-id>`.
 
 - **ReplicaSet**: It is responsible for managing the number of pods (replicas) that are running. It is created by a deployment, and we usually don't create it manually.
-The main problem of using a ReplicaSet directly, without a deployment, is that if we update a configuration of a pod (the version of the image, for example), this new configuration will not be applied to the pods that are already running, instead, it will only be applied to the new pods that are created.
-To solve this problem, we can use a deployment, which is one level above the ReplicaSet, and it is responsible for managing the ReplicaSet, and the pods.
+  The main problem of using a ReplicaSet directly, without a deployment, is that if we update a configuration of a pod (the version of the image, for example), this new configuration will not be applied to the pods that are already running, instead, it will only be applied to the new pods that are created.
+  To solve this problem, we can use a deployment, which is one level above the ReplicaSet, and it is responsible for managing the ReplicaSet, and the pods.
 
 - **Service**: It is responsible for exposing the pods in a cluster to the outside world. It is the entry point for the application. It is also responsible for load balancing the requests between the pods.
-It uses labels to identify the pods that it should expose, for example, using the `selector` field in the `spec` section of the service definition.
-> `port-forward` can also be used to expose a pod, but it is not recommended for production environments.
+  It uses labels to identify the pods that it should expose, for example, using the `selector` field in the `spec` section of the service definition.
+  > `port-forward` can also be used to expose a pod, but it is not recommended for production environments.
 
 The 3 main types of services are:
 
@@ -87,12 +88,15 @@ By using Secrets, the data is stored in base64 format by default. So, we can use
 Even thought Secrets use base64 encoding, it is not totally secure. Since, we can decode the data. The ideal way to use Secrets is to integrate with a secret management tool like Vault. So, no one can access the secrets directly.
 
 As an example, in order to define environment variables using Secrets in a YAML configuration file, instead of defining them as follows:
+
 ```yaml
 data:
   USER: "userx"
   PASSWORD: "passwordy"
 ```
+
 We must define them with all the values in base64 format:
+
 ```yaml
 data:
   USER: "dXNlcngK"
@@ -102,6 +106,7 @@ data:
 The following command can be used to encode the data in base64 format: `echo <data> | base64`.
 
 Remember that the values defined using Secrets are environment variables. So, we can see them by accessing the pod directly:
+
 ```bash
 kubectl get po
 kubectl exec -it <pod_name> -- bash
@@ -113,9 +118,10 @@ echo $USER
 Liveness, readiness, and startup probes are all features of Kubernetes that help ensure that applications running in containers are healthy and running smoothly. They should be defined in the pod definition (inside the Deployment manifest file for example).
 
 - **Liveness** probes are used to check if a container is still running, and if it is not, Kubernetes will **restart** it.
-> This is useful for containers that might become stuck or unresponsive, as it ensures that the application continues to run without interruption.
+  > This is useful for containers that might become stuck or unresponsive, as it ensures that the application continues to run without interruption.
 
 There are basically 3 main ways to implement liveness probes:
+
 1. HTTP GET probes, which perform a GET request to a specified URL and check the response code to determine the container's liveness.
 2. TCP socket probes, which attempt to open a TCP connection to a specified port on the container and check for a successful connection.
 3. Command execution probes, which run a specified command inside the container and check the exit code to determine the container's liveness.
@@ -123,18 +129,20 @@ There are basically 3 main ways to implement liveness probes:
 > Each of these types of probes can be customized to fit the specific needs of the application running in the container.
 
 - **Readiness** probes are similar to liveness probes, but they are used to check if a container is ready to receive traffic. If a container is not ready, Kubernetes will **not send it any traffic**.
-> This can be useful for ensuring that the application has fully started up and is able to handle requests.
+  > This can be useful for ensuring that the application has fully started up and is able to handle requests.
 
 The ways to implement readiness probes are the same as the liveness probes.
 
 **IMPORTANT NOTES**:
+
 - Using Liveness and Readiness at the same time can potentially lead to a `CrashLoopBackOff` error, especially when using the `initialDelaySeconds` option for the Readiness probe. This is because the Liveness probe can fail before the Readiness probe succeeds, which will cause the container to be restarted. So, it will cause a loop of restarts.
-> A possible fix for this is to define the same `initialDelaySeconds` value for both Liveness and Readiness probes. However, if the container fails at some point later, and the Liveness probe runs before the Readiness probe, the container will be restarted again, and the Readiness probe will not be able to succeed, which will cause a loop of restarts again. And a fix for this could be to define a higher value for the `initialDelaySeconds` option for the Liveness probe.
-> All those fixes are not ideal, in fact, they are just workarounds, since in a real-world scenario, we usually don't know how long it will take for the container to start up and be ready to receive traffic, this time can vary a lot depending on the application.
-> To solve those problems, we can use the Startup probe, which was introduced in Kubernetes 1.16 to address those issues and provide a better and definitive solution.
+
+  > A possible fix for this is to define the same `initialDelaySeconds` value for both Liveness and Readiness probes. However, if the container fails at some point later, and the Liveness probe runs before the Readiness probe, the container will be restarted again, and the Readiness probe will not be able to succeed, which will cause a loop of restarts again. And a fix for this could be to define a higher value for the `initialDelaySeconds` option for the Liveness probe.
+  > All those fixes are not ideal, in fact, they are just workarounds, since in a real-world scenario, we usually don't know how long it will take for the container to start up and be ready to receive traffic, this time can vary a lot depending on the application.
+  > To solve those problems, we can use the Startup probe, which was introduced in Kubernetes 1.16 to address those issues and provide a better and definitive solution.
 
 - **Startup** probes are used to check if a container has started up successfully. Basically, it works **like a Readiness probe**, but it is only run **once**, when the container starts up. When a Startup probe is defined, the Liveness and Readiness probes are not run until the Startup probe succeeds.
-> This is useful for applications that take a long time to start up, and don't have a fixed start-up time.
+  > This is useful for applications that take a long time to start up, and don't have a fixed start-up time.
 
 The ways to implement startup probes are the same as the liveness and readiness probes.
 
@@ -146,9 +154,135 @@ In order to use the Horizontal Pod Autoscaler (HPA), we must install the metrics
 
 The installation guide can be found in [this GitHub repository](https://github.com/kubernetes-sigs/metrics-server).
 
-> 
+In local clusters using Minikube or Kind for example, the default installation of the metrics-server will not work due to some security issues. So, we must change the YAML configuration file to allow insecure access to the metrics-server.
 
-## Statefulsets and persistent volumes
+Basically, the default installation is done by applying the following command:
+
+```bash
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+```
+
+In order to allow insecure access to the metrics-server, we must add `- --kubelet-insecure-tls` to the `args` option in the `Deployment` section of the YAML configuration file, as follows:
+
+```yaml
+args:
+  - --cert-dir=/tmp
+  - --secure-port=4443
+  - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
+  - --kubelet-insecure-tls
+```
+
+After installing the metrics-server, we can check if it is running, by listing the api services:
+
+```bash
+kubectl get apiservices
+```
+
+The metrics-server should be listed in the output as `v1beta1.metrics.k8s.io` with the available status as `True`.
+
+### Resources
+
+In order to define the resources that a pod can use, we can use the `resources` option in the pod definition. It is defined as follows:
+
+```yaml
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+```
+
+- `requests` is the **minimum** amount of resources that the pod can use.
+- `limits` is the **maximum** amount of resources that the pod can use.
+
+Both `requests` and `limits` are optional. If we don't define them, the pod will be able to use all the resources available in the node.
+For each resource, we can define the amount of CPU and memory that the pod can use.
+
+- `cpu` is the amount of CPU that the pod can use. It is defined in millicores.
+
+  > In Kubernetes, each node in a cluster has a certain amount of CPU capacity available, and this capacity can be divided among the pods running on that node, 1 CPU core is equal to 1000 millicores.
+  > So, 500m is equal to 0.5 CPU core (half of a CPU core).
+  > We can also use 0.5 as the value for the `cpu` option, which is equal to 500m.
+
+- `memory` is the amount of memory that the pod can use. It is defined in bytes, where 1 Mi is equal to 1048576 bytes.
+  > We can use the suffixes `Ki`, `Mi`, `Gi`, `Ti`, `Pi`, `Ei`, and so on to define the amount of memory in kilobytes, megabytes, gigabytes, terabytes, petabytes, exabytes, and etc.
+
+#### Important note
+
+Always try to prevent the sum of all limits from exceeding the amount of resources in the cluster. Otherwise, the pods will not be able to be scheduled.
+This is a security measure to ensure that all the pods in the cluster can be scheduled. However, we can end up paying more for the resources that we are not using.
+
+### HPA (Horizontal Pod Autoscaler)
+
+The Horizontal Pod Autoscaler (HPA) is a component that automatically scales the number of pods in a deployment based on the CPU usage of the pods.
+
+> It's also possible to scale based on the other metrics, but the CPU usage is the most common.
+
+In order to create an HPA, we must create a YAML configuration file, as follows:
+
+```yaml
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hpa-example
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: hpa-example
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 75
+```
+
+In the above configuration file, we have the following options:
+
+- `scaleTargetRef` is the reference to the deployment that we want to scale.
+- `minReplicas` is the minimum number of replicas that the deployment can have.
+- `targetCPUUtilizationPercentage` is the target CPU utilization percentage. It is the percentage of CPU usage that the pods must have in order to scale up the deployment. If the CPU usage is lower than the target CPU utilization percentage, the deployment will be scaled down.
+
+To get the CPU usage of the pods, we can use the following command:
+
+```bash
+kubectl top pods
+```
+
+And to get the HPA, we can use the following command:
+
+```bash
+kubectl get hpa
+```
+
+#### Stress test
+
+In order to test the HPA, we can use [Fortio](https://github.com/fortio/fortio). It is a load testing tool that can be used to generate load on a service, even in a local cluster.
+
+We can easily expose the service locally, then use create a pod with Fortio and use it to generate load on the service.
+
+First, we must expose the service locally, using the following command:
+
+```bash
+kubectl port-forward service/hpa-example 8080:80
+```
+
+Then, we can create a pod with Fortio, using the following command:
+
+```bash
+kubectl run -it fortio --rm --image=fortio/fortio -- load -qps 800 -t 120s -c 70 "http://localhost:8080/healthz"
+```
+
+The above command will create a pod with Fortio and use it to generate load on the service. The load will be generated by 70 concurrent connections, with a rate of 800 requests per second, for 120 seconds.
+The pod will be deleted after the load test is finished.
+
+To see the CPU usage of the pods, we can use the following command:
+
+```bash
+watch -n 1 kubectl get hpa
+```
+
+The above command will run the `kubectl get hpa` command every second, and it will show the CPU usage of the pods.
 
 ## Ingress
 
@@ -159,6 +293,7 @@ In order to solve this problem, we can use an Ingress. It is a component that ru
 Using Ingress, we can have a single external IP address, and a single load balancer.
 
 When using Ingress, all the services must be exposed using a `ClusterIP` service type. Therefore, the cost for maintaining the services is lower.
+
 > Regarding the service type, once created, it is not possible to change the service type. So, if we want to change the service type, we must delete the service and create a new one.
 
 ### Ingress Controller
@@ -172,7 +307,273 @@ One of the most popular ingress controllers is the Nginx ingress controller. And
 
 After the Nginx ingress controller installation, we can see that it created a new service of type `LoadBalancer`. And if the k8s cluster is running in a cloud provider, it will also create an external IP address. Besides, it should also create a new pod for the ingress controller.
 
-The Ingress rules are defined using YAML manifests as well. Including the annotations, which are used to define third-party especific configurations (Nginx in this case).
+The Ingress rules are defined using YAML manifests as well. Including the annotations, which are used to define third-party specific configurations (Nginx in this case).
+
+## Cert Manager
+
+The Cert Manager is a component that automates the management and issuance of TLS certificates from various certificate authorities, including Let's Encrypt.
+
+> TLS is the abbreviation for Transport Layer Security. It is a protocol that provides security for network communications. It is used to encrypt the data that is sent over the network.
+
+One way to use TLS is to set the TLS configuration in the Ingress definition. However, with the Cert Manager, we can automate the process of issuing TLS certificates, and renewing them when they expire.
+
+### Installation
+
+The installation steps are described in the official documentation](https://cert-manager.io/docs/installation/). It is recommended to install the Cert Manager in a dedicated namespace.
+
+### Issuers
+
+The Issuers are the components that are responsible for issuing the certificates. In order to issue a certificate for the whole cluster, we must use a ClusterIssuer, which is a cluster-wide resource that can be used by any namespace.
+
+The Issuers are defined using YAML manifests. The following is an example of a ClusterIssuer:
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+  namespace: cert-manager
+spec:
+  acme:
+    email: <email>
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+      - http01:
+          ingress:
+            class: nginx
+```
+
+In the above configuration file, we have the following options:
+
+- `spec.acme.email`: The email address that will be used to register with Let's Encrypt.
+- `spec.acme.server`: The URL of the ACME server that will be used to issue the certificates.
+- `spec.acme.privateKeySecretRef.name`: The name of the secret that will be used to store the private key.
+- `spec.acme.solvers`: The list of solvers that will be used to solve the ACME challenges. In this case, we are using the HTTP01 challenge, which requires the ingress controller to expose a specific path in order to validate the challenge.
+
+> `acme` is the ACME protocol, which is used to issue certificates. It is a protocol that is used to automate the process of issuing certificates. It is used by Let's Encrypt, but it can also be used by other certificate authorities.
+
+Now, in the ingress definition, we can use the following annotations:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hpa-example
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+  tls:
+    - hosts:
+        - mydomain.com
+      secretName: letsencrypt-prod
+  rules:
+    - host: mydomain.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: my-service
+                port:
+                  number: 80
+```
+
+> `ingress.kubernetes.io/force-ssl-redirect`: This annotation is optional. It is used to force the redirection from HTTP to HTTPS.
+
+> Remember to set up the DNS records for the domain name.
+
+We can check the status of the certificate using the following command:
+
+```bash
+kubectl get certificates
+```
+
+or
+
+```bash
+kubectl describe certificate letsencrypt-prod
+```
+
+## Namespaces
+
+Namespaces are used to organize the resources in the cluster. They are used to group resources by project, environment, team, etc.
+When we don't specify a namespace, the resources are created in the default namespace.
+
+Namespaces are useful when we want to isolate the resources. For example, we can have more CPU and memory resources in the production namespace, and less resources in the development namespace. Also different security policies can be applied to specific namespaces.
+
+> We can use a different namespace for each environment (development, staging, production, etc). But in general, it is more appropriate to use a different cluster for each environment.
+
+## Contexts
+
+Contexts are used to define the connection to the cluster. They are used to define the cluster, the user, and the namespace that will be used by default.
+
+The contexts are defined in the kubeconfig file. The kubeconfig file is located in the `~/.kube` directory. It is a YAML file that contains the information about the clusters, users, and contexts.
+
+Normally, contexts are used to switch between clusters. But we can also use them to switch between namespaces.
+This is really useful when we are working different environments (development, staging, production, etc) in the same cluster, or any other situation where we want to avoid applying changes to the wrong namespace.
+
+> As mentioned before, it is recommended to use a different cluster for each environment.
+
+In order to create a new context with a specific namespace, we can use the following command:
+
+```bash
+kubectl config set-context dev --cluster=dev --user=dev --namespace=dev
+```
+
+```bash
+kubectl config set-context prod --cluster=prod --user=prod --namespace=prod
+```
+
+Now, we can use the following command to switch between contexts:
+
+```bash
+kubectl config use-context dev
+```
+
+## Service Accounts
+
+When we deploy an application in Kubernetes, this application needs to have a permission to access the Kubernetes API. This is done using a Service Account, and based on the permissions that are defined for this Service Account, the application will be able to access the Kubernetes API to create, update, delete, etc the resources that are required by the application.
+
+Having said that, let's say that this application has a critical vulnerability which allows the attacker to access the Kubernetes API. If the Service Account that is used by the application has the permission to access all the resources in the cluster, the attacker will be able to do anything in the cluster.
+
+Kubernetes has a default Service Account that is used by all the applications that are deployed in the cluster. This Service Account has the permission to access all the resources in the cluster. This is not a good practice, and it is recommended to create a new Service Account with the minimum permissions required by the applications.
+
+We can check the service accounts using the following command:
+
+```bash
+kubectl get serviceaccounts
+```
+
+### How to access the Kubernetes API credentials from a pod
+
+When we deploy an application in Kubernetes, in addition to the pods, Kubernetes also creates a default volume based on the Service Account secret. This volume is mounted in the `/var/run/secrets/kubernetes.io/serviceaccount` directory. This volume contains the following files:
+
+- `ca.crt`: The certificate authority certificate.
+- `namespace`: The namespace that the pod is running in.
+- `token`: The token that is used to access the Kubernetes API.
+
+We can check this by describing the pod:
+
+```bash
+kubectl describe pod <pod-name>
+```
+
+And accessing the pod using the following command:
+
+```bash
+kubectl exec -it <pod-name> -- bash
+```
+
+Now, we can check the content of the `/var/run/secrets/kubernetes.io/serviceaccount` directory:
+
+```bash
+ls /var/run/secrets/kubernetes.io/serviceaccount
+```
+
+So, if we do not use a custom Service Account, the files described above will allow full access to the Kubernetes API, allowing to delete, update, create, etc all the resources in the cluster.
+
+### Creating a custom Service Account with limited permissions
+
+In order to create a custom Service Account, we can use the following YAML manifest:
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: my-service-account
+```
+
+#### RBAC
+
+RBAC is a Kubernetes feature that allows us to define the permissions that are granted to a Service Account. It stands for Role-Based Access Control.
+
+To create a new Role, we can use the following YAML manifest:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: my-role
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "watch", "list"]
+```
+
+> `apiGroups`: The API group that contains the resource.
+
+We can check the API resources using the following command:
+
+```bash
+kubectl api-resources
+```
+
+As we can see, there are some resources that are not part of any API group. For example, the `pods` resource. In this case, we can use an empty string as the API group. But for the `deployments` resource, we need to use the `apps` API group.
+
+> `resources`: The resources that the role has access to.
+> `verbs`: The operations that the role is allowed to perform.
+
+#### RoleBinding
+
+In order to bind a Role to a Service Account, we can use the following YAML manifest:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: my-service-account-read-binding
+subjects:
+  - kind: ServiceAccount
+    name: my-service-account
+    namespace: default
+roleRef:
+  kind: Role
+  name: my-role
+  apiGroup: rbac.authorization.k8s.io
+```
+
+Finally, after creating the Service Account, Role, and RoleBinding, we can attach the Service Account to a deployment as follows:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      serviceAccountName: my-service-account
+      containers:
+        - name: my-container
+          image: nginx
+```
+
+The `serviceAccountName` property specifies the Service Account that is used by the pod.
+
+#### ClusterRole
+
+A ClusterRole is a Role that is not bound to a specific namespace. It can be used to grant access to all the resources in the cluster.
+
+For example, in the previous Role example, that Role can only be used in the `default` namespace. If we want to use the same Role in another namespace, we need to create a new Role with the same permissions.
+
+But, if we want to use the same Role in all the namespaces, we can use a ClusterRole instead.
+
+The process of creating a ClusterRole is the same as creating a Role. The only difference is that we need to use the `ClusterRole` kind instead of the `Role` kind. And a `ClusterRoleBinding` instead of a `RoleBinding`.
 
 ## kubectl commands
 
@@ -203,7 +604,7 @@ The Ingress rules are defined using YAML manifests as well. Including the annota
 
 ## Rollback
 
-When we update a deployment, k8s will create a new ReplicaSet, and will start creating new pods with the new configuration. But the old ReplicaSet will still be there, however, withoud any pods. So, it is possible to rollback to a previous version of the deployment.
+When we update a deployment, k8s will create a new ReplicaSet, and will start creating new pods with the new configuration. But the old ReplicaSet will still be there, however, without any pods. So, it is possible to rollback to a previous version of the deployment.
 
 To rollback to the last version of the deployment, we can use the `kubectl rollout undo deployment <deployment-name>` command.
 
