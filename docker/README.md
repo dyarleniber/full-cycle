@@ -2,7 +2,7 @@
 
 # Docker
 
-![architecture](https://wiki.aquasec.com/download/attachments/2854889/Docker_Architecture.png?version=1&modificationDate=1547002099000&api=v2)
+![architecture](https://user-images.githubusercontent.com/40317398/230972946-0a6db1ec-04e3-4a7d-90ea-ec2127b473b3.png)
 
 ## Containers
 
