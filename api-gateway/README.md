@@ -1,6 +1,6 @@
 [Back](../README.md)
 
-# API Gateways 
+# API Gateways
 
 Before we start, let's understand what is an API: API is a set of operations with the aim of offering its consumers a service, product, or an integration.
 The consumer (client) of the API does not need to know how the API is implemented.
@@ -9,7 +9,7 @@ The consumer (client) of the API does not need to know how the API is implemente
 The API Gateway can also be used to authentication, routing, rate limiting, monitoring, logging, distributed tracing, and other common functions that are not specific to one service.
 
 > It is important to take into account that the API Gateway is a single point of failure, since it is the only point of entry to the API.
-So, we should guarantee that the API Gateway is running with a high availability.
+> So, we should guarantee that the API Gateway is running with a high availability.
 
 > API Gateway can be deployed mainly in two different ways, on the edge (PEP - Policy Enforcement Point), or in the middle. Both strategies can also be used at the same time.
 
@@ -33,6 +33,7 @@ It can be managed via a configuration file (declarative).
 In general, they do not support the lifecycle of the APIs.
 
 Some tips:
+
 - Use the flexibility of the deployment to "partition" your APIs (use bounded context from DDD).
 - Try to be stateless as much as possible, this will increase the scalability / availability a lot.
 - Reduce the number of instances to gain experience in managing the environment. The number of instances can be a problem in teams without expertise in monitoring / observability.
@@ -44,6 +45,10 @@ Some tips:
 Kong is an open source API Gateway, can be used as a microservices gateway or as an enterprise gateway, and it's ready to be deployed in Kubernetes, using the Kong Ingress Controller. It is also extensible via plugins (policies), which can be applied globally, per route, or per consumer.
 
 > [Here is an example](https://github.com/dyarleniber/kong-api-gateway-poc/blob/main/k8s/README.md) of Kong API Gateway deployed in Kubernetes, and using custom Typescript plugins.
+
+> [Here is another example](https://github.com/devfullcycle/FC3-admin-catalogo-de-videos-api-gateway) of Kong API Gateway using docker-compose.
+
+> [Here is a more robust example](https://github.com/devfullcycle/FC3-kong-automation) of Kong API Gateway deployed in Kubernetes, using other additional tools like Keycloak, Prometheus, Grafana, Argocd, etc.
 
 > Under the hood, Kong uses NGINX, and OpenResty (a Lua framework based on NGINX). This makes it possible to use Lua to write plugins, in fact, most of the plugins available for Kong are written in Lua.
 
@@ -89,36 +94,46 @@ All combinations of various runtimes, databases and configuration methods are su
 #### Kubernetes Ingress
 
 Kubernetes Ingress is a collection of rules that proxy the traffic from outside the cluster (by exposing HTTP and HTTPS routes) to services within the cluster (using the ClusterIP type for example). These rules are defined inside the Ingress resource of Kubernetes.
-So, Kubernetes Ingress acts as an entry point for the cluster.
+So, Kubernetes Ingress acts as an entry point for the cluster. By using Ingress, we can expose multiple services under a single IP address.
+
+In order to work with Ingress, the cluster must have an Ingress controller to satisfy the Ingress, some examples of Ingress controllers are NGINX, Traefik, HAProxy, etc.
 
 Kong can be deployed in Kubernetes using the official [Kong Ingress Controller](https://github.com/Kong/kubernetes-ingress-controller). This controller is responsible for translating the Kubernetes Ingress resources into Kong configuration (using the localhost Kong API), which is then used to route and control traffic.
 
 When using Kong Ingress Controller, each Kong pod contains 2 containers (Controller + Data Plane), a controller (container which configures Kong) and a Kong container (which proxies the requests). Scaling out simply requires horizontally scaling this deployment to handle more traffic or to add redundancy in the infrastructure.
 
+#### Custom Resource Definitions (CRDs)
 
+Kong Ingress Controller can also be used with Custom Resource Definitions (CRDs), which are a way to extend the Kubernetes API.
+A few CRDs are available for Kong, such as `KongConsumer`, `KongPlugin`, and `KongIngress`.
 
+- `KongIngress` is used to configure Kong Ingress resources.
 
+> Note: Many fields available on KongIngress are also available as annotations. You can add these annotations directly to Service and Ingress resources without creating a separate KongIngress resource.
 
+- `KongPlugin` is used to configure Kong plugins. (`KongClusterPlugin` is used to configure Kong plugins globally).
+- `KongConsumer` is used to configure Kong consumers.
 
+The Kubernetes Ingress Controller uses the `configuration.konghq.com` API group to manage these CRDs. This is an example of a `KongPlugin` resource:
 
+```yaml
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: my-plugin
+config:
+  foo: bar
+plugin: my-plugin
+```
 
+> When using Kong with a service mesh, it is recommended to use set the `preserve_host` option to `false` in an `KongIngress` resource. besides, inside the Kubernetes service, it is recommended to use the annotation `ingress.kubernetes.io/service-upstream: "true"`.
 
+# APIOps
 
+APIOps is a set of practices that help to improve the API lifecycle, and to ensure that the APIs are available, secure, and performant.
 
+It's a concept that applies the DevOps and GitOps principles to APIs.
 
-!! konghq.com/override: do-not-preserve-host (Might be a problem for 20min, since its using the host info on user service)
+> DevOps is a set of practices that combines software development (Dev) and IT operations (Ops), which aims to shorten the systems development life cycle and provide continuous delivery with high software quality.
 
-!! upstream: host_header = por padrao o ingress do kong vai fazer o load balance pelos ips dos pods
-caso queria delegar o modelo de roteamento do kongo para o k8s é preciso incluir a seguinte anotacao na rota
-annotations: ingress.kubernetes.io/service-upstream: "true"
-e definir do-not-preserve-host e definir host_header: <service_name>.<service_name>.svc (bets.bets.svc)
-
-
-
-
-
-
-
-
-
-
+> GitOps is a set of practices that uses Git as a single source of truth for declarative infrastructure and applications. It aims to simplify the operations of the infrastructure and applications.
